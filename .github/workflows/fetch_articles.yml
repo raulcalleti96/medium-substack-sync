@@ -1,0 +1,26 @@
+name: Fetch Articles from Medium & Substack
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-articles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Fetch Medium Articles
+        run: curl -s "https://api.rss2json.com/v1/api.json?rss_url=https://medium.com/feed/@Raulcalleti" > medium.json
+
+      - name: Fetch Substack Articles
+        run: curl -s "https://api.rss2json.com/v1/api.json?rss_url=https://raulsantiago.substack.com/feed" > substack.json
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add medium.json substack.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Updated articles from Medium & Substack" && git push)
