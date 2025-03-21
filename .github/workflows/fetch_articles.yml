@@ -1,39 +1,28 @@
-name: Fetch Medium & Substack Articles
+name: 📡 Fetch Medium & Substack Articles
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Ejecutar una vez al día a medianoche UTC
-  workflow_dispatch:  # Permite ejecución manual desde GitHub Actions
-
-permissions:
-  contents: write  # Permiso para hacer commit y push
+    - cron: '0 0 * * *'  # Ejecutar todos los días a la medianoche UTC
+  workflow_dispatch:  # Permite ejecución manual
 
 jobs:
   fetch-articles:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🛎 Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v3
-        with:
-          persist-credentials: false  # Evita conflictos con credenciales de GitHub
-
-      - name: 🏗 Set up Node.js
-        uses: actions/setup-node@v20
-        with:
-          node-version: 20
-
-      - name: 📦 Install dependencies
-        run: npm install
 
       - name: 📡 Fetch Medium & Substack Articles
-        run: node fetch_articles.js
-
-      - name: 🚀 Commit and push if changed
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          sudo apt update
+          sudo apt install -y nodejs npm
+          node fetch_articles.js
+
+      - name: 💾 Commit and push changes
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
           git add articles.json
-          git diff --staged --quiet || (git commit -m "🔄 Update articles.json" && git push)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git commit -m "🔄 Auto-update articles from Medium & Substack" || exit 0
+          git push
