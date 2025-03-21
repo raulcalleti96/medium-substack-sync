@@ -1,37 +1,44 @@
 const fetch = require("node-fetch");
 const fs = require("fs");
-const { parseStringPromise } = require("xml2js");
 
-// URLs de los feeds
-const MEDIUM_FEED_URL = "https://medium.com/feed/@Raulcalleti";
-const SUBSTACK_FEED_URL = "https://raulcalleti.substack.com/feed.xml";
+// Proxy para convertir RSS a JSON (evita el 403 en Medium y Substack)
+const MEDIUM_FEED_URL = `https://api.rss2json.com/v1/api.json?rss_url=https://medium.com/feed/@Raulcalleti`;
+const SUBSTACK_FEED_URL = `https://api.rss2json.com/v1/api.json?rss_url=https://raulcalleti.substack.com/feed.xml`;
 
-// Función para obtener y convertir XML a JSON
+// Función para obtener y convertir RSS a JSON
 async function fetchRSS(url) {
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            },
+        });
+
         if (!response.ok) {
             console.warn(`⚠ No articles found at ${url} (${response.status} ${response.statusText})`);
-            return []; // Devuelve un array vacío si no hay artículos
+            return []; // Devuelve un array vacío si falla
         }
 
-        const xmlData = await response.text();
-        const jsonData = await parseStringPromise(xmlData, { explicitArray: false });
+        const jsonData = await response.json();
 
-        // Medium usa 'rss.channel.item' y Substack usa 'rss.channel.item' también.
-        return jsonData.rss.channel.item || [];
+        if (!jsonData.items || jsonData.items.length === 0) {
+            console.warn(`⚠ No articles available from ${url}`);
+            return [];
+        }
+
+        return jsonData.items; // Retorna los artículos en formato JSON
     } catch (error) {
         console.error(`❌ Error fetching ${url}:`, error.message);
         return []; // Devuelve un array vacío en caso de error
     }
 }
 
-// Función principal
+// Función principal para obtener y guardar los artículos
 async function fetchArticles() {
-    console.log("Fetching Medium articles...");
+    console.log("📡 Fetching Medium articles...");
     const mediumArticles = await fetchRSS(MEDIUM_FEED_URL);
 
-    console.log("Fetching Substack articles...");
+    console.log("📡 Fetching Substack articles...");
     const substackArticles = await fetchRSS(SUBSTACK_FEED_URL);
 
     // Formatear los artículos en JSON
@@ -41,12 +48,16 @@ async function fetchArticles() {
             link: article.link,
             date: article.pubDate,
             description: article.description,
+            thumbnail: article.thumbnail || null, // Imagen si está disponible
+            categories: article.categories || [],
         })),
         substack: substackArticles.map((article) => ({
             title: article.title,
             link: article.link,
             date: article.pubDate,
             description: article.description,
+            thumbnail: article.thumbnail || null,
+            categories: article.categories || [],
         })),
     };
 
