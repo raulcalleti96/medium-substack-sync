@@ -1,26 +1,32 @@
-name: Fetch Articles from Medium & Substack
+name: Fetch Articles
 
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
+    - cron: "0 0 * * *" # Ejecuta el workflow una vez al día a las 00:00 UTC
+  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub Actions
 
 jobs:
   fetch-articles:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: 🛎 Checkout repository
         uses: actions/checkout@v3
 
-      - name: Fetch Medium Articles
-        run: curl -s "https://api.rss2json.com/v1/api.json?rss_url=https://medium.com/feed/@Raulcalleti" > medium.json
+      - name: 📦 Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-      - name: Fetch Substack Articles
-        run: curl -s "https://api.rss2json.com/v1/api.json?rss_url=https://raulsantiago.substack.com/feed" > substack.json
+      - name: 📥 Install dependencies
+        run: npm install
 
-      - name: Commit and push if changed
+      - name: 🌍 Fetch Medium & Substack Articles
+        run: node fetch_articles.js
+
+      - name: 🚀 Commit and Push if changed
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add medium.json substack.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Updated articles from Medium & Substack" && git push)
+          git config --global user.email "github-actions@github.com"
+          git add articles.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🔄 Updated articles" && git push)
